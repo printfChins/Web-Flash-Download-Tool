@@ -15,12 +15,10 @@
 ## 專案結構
 
 ```text
-ESP32C3_Web_Flash_Download_Tool/
+Web-Flash-Download-Tool/
 ├── .github/
 │   └── workflows/
 │       └── deploy-pages.yml
-├── .openai/
-│   └── hosting.json
 ├── dist/
 │   ├── .nojekyll
 │   ├── index.html
@@ -54,3 +52,32 @@ ESP32C3_Web_Flash_Download_Tool/
 2. 短按 RESET。
 3. 放開 BOOT。
 4. 回到網站重新執行燒錄。
+
+## V1.0.1 修改
+
+- [刪減] dist/index.html：移除四個燒錄設定欄位。
+- [新增] dist/app.js：固定鮑率 460800，移除選單存取。
+- [刪減] dist/styles.css：移除設定區塊專用樣式。
+- 固定位址 0x000000、4096 KB 大小檢查、4 MB 燒錄參數維持。
+- 部署時覆蓋專案根目錄內的 dist 資料夾。本版尚未實體燒錄驗證。
+
+## V1.0.2 修改
+
+- [刪減] dist/index.html：移除右上角 TARGET、ESP32-C3、0x000000 / 4 MB 資訊區塊。
+- [刪減] dist/styles.css：移除 target-badge 專用樣式。
+- 延續 V1.0.1，四個設定欄位不顯示；鮑率固定 460800。
+- 本次僅修改顯示，未修改燒錄邏輯。
+
+## V1.0.3 修改
+
+- [刪減] dist/index.html：移除注意與擦除提示文字區塊。
+- [刪減] dist/styles.css：移除 safety-note 專用樣式。
+- 包含 V1.0.1 與 V1.0.2 的顯示調整。
+- 實際燒錄仍會先擦除整顆 Flash，燒錄邏輯未變更。
+
+## V1.0.4 修改
+
+- [新增] dist/styles.css：燒錄按鈕懸停上浮、背景變亮、陰影發光與箭頭右移。
+- 僅在按鈕可操作時生效；按下時回到原位。
+- 支援鍵盤焦點框及 prefers-reduced-motion。
+- 包含 V1.0.3 所有修改；HTML 與燒錄程式未修改。

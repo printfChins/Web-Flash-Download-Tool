@@ -16,11 +16,7 @@
         <p class="eyebrow">UART FLASH UTILITY</p>
         <h1>ESP32-C3<br><span>Flash Download Tool</span></h1>
       </div>
-      <div class="target-badge" aria-label="固定燒錄規格">
-        <span>TARGET</span>
-        <strong>ESP32-C3</strong>
-        <small>0x000000 / 4 MB</small>
-      </div>
+      <!-- [V1.0.2 刪減] 移除右上角 TARGET 資訊區塊。 -->
     </header>
 
     <section class="workspace" aria-label="燒錄工具">
@@ -37,23 +33,8 @@
           <small id="fileMeta">點擊選擇，或將檔案拖曳至此</small>
         </label>
 
-        <div class="spec-grid">
-          <div><span>FLASH ADDRESS</span><strong>0x000000</strong></div>
-          <div><span>IMAGE SIZE</span><strong>4096 KB</strong></div>
-          <div><span>FLASH SIZE</span><strong>4 MB</strong></div>
-          <label><span>BAUD RATE</span>
-            <select id="baudRate">
-              <option value="460800" selected>460800</option>
-              <option value="921600">921600</option>
-              <option value="115200">115200</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="safety-note">
-          <strong>注意</strong>
-          <p>開始後會先擦除整顆 Flash，裝置中原有資料將被清除。</p>
-        </div>
+        <!-- [V1.0.1 刪減] 移除 FLASH ADDRESS、IMAGE SIZE、FLASH SIZE、BAUD RATE 設定區塊。 -->
+        <!-- [V1.0.3 刪減] 移除注意與擦除提示文字區塊。 -->
 
         <button class="flash-button" id="flashButton" type="button" disabled>
           <span id="buttonText">請先選擇燒錄檔</span>

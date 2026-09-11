@@ -2,13 +2,14 @@ import { ESPLoader, Transport } from "https://unpkg.com/esptool-js@0.5.7/bundle.
 
 const IMAGE_SIZE = 4 * 1024 * 1024;
 const FLASH_ADDRESS = 0x000000;
+// [V1.0.1 新增] 移除鮑率選單後固定使用原預設值。
+const BAUD_RATE = 460800;
 
 const elements = {
   input: document.querySelector("#firmwareInput"),
   dropZone: document.querySelector("#dropZone"),
   fileName: document.querySelector("#fileName"),
   fileMeta: document.querySelector("#fileMeta"),
-  baud: document.querySelector("#baudRate"),
   flashButton: document.querySelector("#flashButton"),
   disconnectButton: document.querySelector("#disconnectButton"),
   buttonText: document.querySelector("#buttonText"),
@@ -62,7 +63,6 @@ function resetStages() {
 
 function updateControls() {
   elements.input.disabled = busy;
-  elements.baud.disabled = busy;
   elements.flashButton.disabled = busy || !firmwareFile || !("serial" in navigator);
   elements.buttonText.textContent = busy
     ? "燒錄進行中"
@@ -157,7 +157,7 @@ async function flashFirmware() {
     transport = new Transport(port, true);
     const loader = new ESPLoader({
       transport,
-      baudrate: Number(elements.baud.value),
+      baudrate: BAUD_RATE,
       terminal,
       debugLogging: false,
     });
