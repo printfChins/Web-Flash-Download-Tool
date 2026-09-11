@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07131f">
+  <meta name="description" content="ESP32-C3 4096 KB 完整 Flash 映像 UART 燒錄工具">
+  <title>ESP32-C3 Flash Download Tool</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307131f'/%3E%3Cpath d='M20 17h24v30H20z' fill='none' stroke='%2338d9ff' stroke-width='5'/%3E%3Cpath d='M13 24h7m-7 8h7m-7 8h7m24-16h7m-7 8h7m-7 8h7' stroke='%23f4b942' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">UART FLASH UTILITY</p>
+        <h1>ESP32-C3<br><span>Flash Download Tool</span></h1>
+      </div>
+      <div class="target-badge" aria-label="固定燒錄規格">
+        <span>TARGET</span>
+        <strong>ESP32-C3</strong>
+        <small>0x000000 / 4 MB</small>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="燒錄工具">
+      <div class="control-panel">
+        <div class="step-heading">
+          <span>01</span>
+          <div><h2>選擇完整映像</h2><p>檔案必須剛好為 4,194,304 bytes</p></div>
+        </div>
+
+        <label class="drop-zone" id="dropZone" for="firmwareInput">
+          <input id="firmwareInput" type="file" accept=".bin,application/octet-stream">
+          <span class="file-icon" aria-hidden="true">BIN</span>
+          <strong id="fileName">選擇 4096 KB BIN</strong>
+          <small id="fileMeta">點擊選擇，或將檔案拖曳至此</small>
+        </label>
+
+        <div class="spec-grid">
+          <div><span>FLASH ADDRESS</span><strong>0x000000</strong></div>
+          <div><span>IMAGE SIZE</span><strong>4096 KB</strong></div>
+          <div><span>FLASH SIZE</span><strong>4 MB</strong></div>
+          <label><span>BAUD RATE</span>
+            <select id="baudRate">
+              <option value="460800" selected>460800</option>
+              <option value="921600">921600</option>
+              <option value="115200">115200</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="safety-note">
+          <strong>注意</strong>
+          <p>開始後會先擦除整顆 Flash，裝置中原有資料將被清除。</p>
+        </div>
+
+        <button class="flash-button" id="flashButton" type="button" disabled>
+          <span id="buttonText">請先選擇燒錄檔</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <button class="disconnect-button" id="disconnectButton" type="button" hidden>中斷連線</button>
+      </div>
+
+      <aside class="monitor-panel">
+        <div class="monitor-header">
+          <div>
+            <p class="eyebrow">LIVE SESSION</p>
+            <h2>燒錄狀態</h2>
+          </div>
+          <span class="status-pill" id="statusPill" data-state="idle">待命</span>
+        </div>
+
+        <div class="progress-block">
+          <div class="progress-label"><span id="stageLabel">等待操作</span><strong id="progressText">0%</strong></div>
+          <div class="progress-track"><div id="progressBar"></div></div>
+        </div>
+
+        <ol class="stage-list">
+          <li id="stageConnect"><span>01</span><div><strong>連接裝置</strong><small>偵測 ESP32-C3</small></div></li>
+          <li id="stageErase"><span>02</span><div><strong>擦除 Flash</strong><small>清除完整 4 MB 空間</small></div></li>
+          <li id="stageWrite"><span>03</span><div><strong>寫入映像</strong><small>起始位址 0x000000</small></div></li>
+          <li id="stageVerify"><span>04</span><div><strong>校驗並重啟</strong><small>確認資料完整性</small></div></li>
+        </ol>
+
+        <div class="terminal">
+          <div class="terminal-title"><span></span><span></span><span></span><strong>FLASH LOG</strong><button id="clearLog" type="button">清除</button></div>
+          <pre id="logOutput" aria-live="polite">系統待命。請選擇 4096 KB BIN 燒錄檔。</pre>
+        </div>
+      </aside>
+    </section>
+
+    <footer>
+      <p>需要桌面版 Chrome 或 Edge，並透過 HTTPS 存取。</p>
+      <p>USB UART 必須使用 3.3 V 邏輯準位。</p>
+    </footer>
+  </main>
+
+  <div class="browser-warning" id="browserWarning" hidden>
+    此瀏覽器不支援 Web Serial。請改用桌面版 Chrome 或 Microsoft Edge。
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
