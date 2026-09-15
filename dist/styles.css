@@ -139,3 +139,62 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+
+/* [新增] 內建 Firmware 選擇器：沿用原 UI 色票與幾何風格。 */
+.firmware-picker {
+  margin-bottom: 14px;
+}
+
+.firmware-picker > label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font: 700 .76rem/1.2 ui-monospace, monospace;
+  letter-spacing: .08em;
+}
+
+.select-wrap {
+  position: relative;
+}
+
+.select-wrap::after {
+  content: "⌄";
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  color: var(--cyan);
+  font-size: 1.1rem;
+  pointer-events: none;
+  transform: translateY(-58%);
+}
+
+.firmware-picker select {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 46px 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  outline: 0;
+  appearance: none;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+
+.firmware-picker select:hover {
+  border-color: #36566c;
+  background: #112a3d;
+}
+
+.firmware-picker select:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+
+.firmware-picker select:disabled {
+  cursor: not-allowed;
+  color: #6e8797;
+  background: #142733;
+}

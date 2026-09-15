@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07131f">
   <meta name="description" content="ESP32-C3 4096 KB 完整 Flash 映像 UART 燒錄工具">
-  <title>ESP32-C3 Flash Download Tool</title>
+  <title>BRD Flash Download Tool</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307131f'/%3E%3Cpath d='M20 17h24v30H20z' fill='none' stroke='%2338d9ff' stroke-width='5'/%3E%3Cpath d='M13 24h7m-7 8h7m-7 8h7m24-16h7m-7 8h7m-7 8h7' stroke='%23f4b942' stroke-width='4'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -14,7 +14,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">UART FLASH UTILITY</p>
-        <h1>ESP32-C3<br><span>Flash Download Tool</span></h1>
+        <h1>BRD<br><span>Flash Download Tool</span></h1>
       </div>
       <!-- [V1.0.2 刪減] 移除右上角 TARGET 資訊區塊。 -->
     </header>
@@ -23,13 +23,24 @@
       <div class="control-panel">
         <div class="step-heading">
           <span>01</span>
-          <div><h2>選擇完整映像</h2><p>檔案必須剛好為 4,194,304 bytes</p></div>
+          <div><h2>選擇完整映像</h2><p></p></div>
         </div>
 
+        <!-- [新增] 內建 Firmware 下拉選單，獨立於上傳框之外。 -->
+        <div class="firmware-picker">
+          <label for="firmwareSelect">內建 Firmware</label>
+          <div class="select-wrap">
+            <select id="firmwareSelect">
+              <option value="">選擇內建 Firmware</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- [保留] 原本拖曳 / 點擊上傳 BIN 的 UI。 -->
         <label class="drop-zone" id="dropZone" for="firmwareInput">
           <input id="firmwareInput" type="file" accept=".bin,application/octet-stream">
           <span class="file-icon" aria-hidden="true">BIN</span>
-          <strong id="fileName">選擇 4096 KB BIN</strong>
+          <strong id="fileName">選擇 BIN</strong>
           <small id="fileMeta">點擊選擇，或將檔案拖曳至此</small>
         </label>
 
@@ -46,7 +57,7 @@
       <aside class="monitor-panel">
         <div class="monitor-header">
           <div>
-            <p class="eyebrow">LIVE SESSION</p>
+            <p class="eyebrow"></p>
             <h2>燒錄狀態</h2>
           </div>
           <span class="status-pill" id="statusPill" data-state="idle">待命</span>
@@ -66,14 +77,14 @@
 
         <div class="terminal">
           <div class="terminal-title"><span></span><span></span><span></span><strong>FLASH LOG</strong><button id="clearLog" type="button">清除</button></div>
-          <pre id="logOutput" aria-live="polite">系統待命。請選擇 4096 KB BIN 燒錄檔。</pre>
+          <pre id="logOutput" aria-live="polite">系統待命。請選擇內建 Firmware 或上傳 BIN 燒錄檔。</pre>
         </div>
       </aside>
     </section>
 
     <footer>
-      <p>需要桌面版 Chrome 或 Edge，並透過 HTTPS 存取。</p>
-      <p>USB UART 必須使用 3.3 V 邏輯準位。</p>
+      <p></p>
+      <p></p>
     </footer>
   </main>
 

@@ -7,6 +7,7 @@ const BAUD_RATE = 460800;
 
 const elements = {
   input: document.querySelector("#firmwareInput"),
+  firmwareSelect: document.querySelector("#firmwareSelect"),
   dropZone: document.querySelector("#dropZone"),
   fileName: document.querySelector("#fileName"),
   fileMeta: document.querySelector("#fileMeta"),
@@ -63,6 +64,7 @@ function resetStages() {
 
 function updateControls() {
   elements.input.disabled = busy;
+  if (elements.firmwareSelect) elements.firmwareSelect.disabled = busy;
   elements.flashButton.disabled = busy || !firmwareFile || !("serial" in navigator);
   elements.buttonText.textContent = busy
     ? "燒錄進行中"
@@ -76,9 +78,6 @@ function validateFile(file) {
   if (!file || !file.name.toLowerCase().endsWith(".bin")) {
     throw new Error("僅允許選擇 .bin 燒錄檔。");
   }
-  if (file.size !== IMAGE_SIZE) {
-    throw new Error(`檔案大小為 ${file.size.toLocaleString()} bytes，必須剛好為 4,194,304 bytes。`);
-  }
 }
 
 function selectFile(file) {
@@ -89,8 +88,8 @@ function selectFile(file) {
     firmwareFile = file;
     elements.dropZone.classList.add("valid");
     elements.fileName.textContent = file.name;
-    elements.fileMeta.textContent = "4,194,304 bytes / 格式檢查通過";
-    appendLog(`已載入 ${file.name}，檔案大小檢查通過。`);
+    elements.fileMeta.textContent = `${file.size.toLocaleString()} bytes / BIN 格式檢查通過`;
+    appendLog(`已載入 ${file.name}，大小 ${file.size.toLocaleString()} bytes。`);
     setStatus("檔案就緒", "success");
   } catch (error) {
     elements.dropZone.classList.add("invalid");
@@ -182,7 +181,9 @@ async function flashFirmware() {
       eraseAll: true,
       compress: true,
       reportProgress: (_fileIndex, written, total) => {
-        setProgress((written / total) * 100, "正在寫入 Flash");
+        const rawPercent = total > 0 ? (written / total) * 100 : 0;
+        const displayPercent = Math.min(rawPercent, 99);
+        setProgress(displayPercent, written >= total ? "正在校驗 Flash" : "正在寫入 Flash");
       },
       calculateMD5Hash: (image) => window.CryptoJS.MD5(
         window.CryptoJS.enc.Latin1.parse(image)
@@ -243,3 +244,66 @@ if (!("serial" in navigator)) {
   appendLog("目前瀏覽器不支援 Web Serial API。請使用桌面版 Chrome 或 Edge。");
 }
 updateControls();
+
+
+/*
+ * [新增] BRD 內建 Firmware 下拉選單。
+ * 內建 BIN 與使用者上傳 BIN 共用 selectFile() / flashFirmware() 流程。
+ */
+async function loadBuiltinFirmwareList() {
+  if (!elements.firmwareSelect) return;
+
+  try {
+    const response = await fetch("./firmware/firmware-list.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const list = await response.json();
+    for (const item of list) {
+      if (!item.name || !item.path) continue;
+
+      const option = document.createElement("option");
+      option.value = item.path;
+      option.textContent = item.name;
+      elements.firmwareSelect.appendChild(option);
+    }
+
+    if (list.length > 0) {
+      appendLog(`已載入 ${list.length} 個內建 Firmware 選項。`);
+    }
+  } catch (error) {
+    appendLog(`內建 Firmware 清單讀取失敗：${error.message || error}`);
+  }
+}
+
+if (elements.firmwareSelect) {
+  elements.firmwareSelect.addEventListener("change", async () => {
+    if (!elements.firmwareSelect.value) return;
+
+    try {
+      const response = await fetch(elements.firmwareSelect.value, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const blob = await response.blob();
+      const optionText =
+        elements.firmwareSelect.options[elements.firmwareSelect.selectedIndex].textContent ||
+        "firmware.bin";
+      const fileName = optionText.toLowerCase().endsWith(".bin")
+        ? optionText
+        : `${optionText}.bin`;
+
+      const file = new File([blob], fileName, { type: "application/octet-stream" });
+      elements.input.value = "";
+      selectFile(file);
+    } catch (error) {
+      appendLog(`內建 Firmware 載入失敗：${error.message || error}`);
+      setStatus("Firmware 錯誤", "error");
+    }
+  });
+}
+
+/* [新增] 使用本機上傳時，取消內建 Firmware 的選取狀態。 */
+elements.input.addEventListener("click", () => {
+  if (elements.firmwareSelect) elements.firmwareSelect.value = "";
+});
+
+loadBuiltinFirmwareList();
