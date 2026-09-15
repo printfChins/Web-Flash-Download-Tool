@@ -26,16 +26,6 @@
           <div><h2>選擇完整映像</h2><p></p></div>
         </div>
 
-        <!-- [新增] 內建 Firmware 下拉選單，獨立於上傳框之外。 -->
-        <div class="firmware-picker">
-          <label for="firmwareSelect">內建 Firmware</label>
-          <div class="select-wrap">
-            <select id="firmwareSelect">
-              <option value="">選擇內建 Firmware</option>
-            </select>
-          </div>
-        </div>
-
         <!-- [保留] 原本拖曳 / 點擊上傳 BIN 的 UI。 -->
         <label class="drop-zone" id="dropZone" for="firmwareInput">
           <input id="firmwareInput" type="file" accept=".bin,application/octet-stream">
@@ -77,7 +67,7 @@
 
         <div class="terminal">
           <div class="terminal-title"><span></span><span></span><span></span><strong>FLASH LOG</strong><button id="clearLog" type="button">清除</button></div>
-          <pre id="logOutput" aria-live="polite">系統待命。請選擇內建 Firmware 或上傳 BIN 燒錄檔。</pre>
+          <pre id="logOutput" aria-live="polite">系統待命。請上傳 BIN 燒錄檔。</pre>
         </div>
       </aside>
     </section>
