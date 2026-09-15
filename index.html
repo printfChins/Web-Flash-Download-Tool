@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>BRD Flash Download Tool</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="panel">
+    <div class="eyebrow">BRD</div>
+    <h1>Flash Download Tool</h1>
+    <p class="sub">ESP32-C3 Firmware Programmer</p>
+
+    <section class="spec-grid">
+      <div><span>Chip</span><strong>ESP32-C3</strong></div>
+      <div><span>Address</span><strong>0x000000</strong></div>
+      <div><span>Flash Size</span><strong>4 MB</strong></div>
+      <div><span>Baud Rate</span><strong>460800</strong></div>
+    </section>
+
+    <section class="card">
+      <label class="file-label" for="firmwareSelect">Firmware</label>
+      <select id="firmwareSelect">
+        <option value="">選擇 firmware 資料夾內的 BIN</option>
+      </select>
+
+      <div class="or-line"><span>或</span></div>
+
+      <label class="file-label" for="firmwareFile">從電腦選擇 .bin</label>
+      <input id="firmwareFile" type="file" accept=".bin,application/octet-stream">
+      <div id="fileInfo" class="file-info">尚未選擇韌體</div>
+    </section>
+
+    <section class="actions">
+      <button id="connectBtn" type="button">1. 連接 ESP32-C3</button>
+      <button id="flashBtn" type="button" disabled>2. 清除並燒錄</button>
+      <button id="disconnectBtn" type="button" class="secondary" disabled>中斷連線</button>
+    </section>
+
+    <section class="progress-wrap">
+      <div class="progress-head">
+        <span id="statusText">等待連線</span>
+        <span id="progressText">0%</span>
+      </div>
+      <progress id="progressBar" value="0" max="100"></progress>
+    </section>
+
+    <section class="console-card">
+      <div class="console-head">
+        <span>LOG</span>
+        <button id="clearLogBtn" type="button" class="tiny">清除</button>
+      </div>
+      <pre id="consoleOutput"></pre>
+    </section>
+
+    <p class="warning">
+      燒錄會清除 Flash 內容。更新期間請勿拔除 USB。
+    </p>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
