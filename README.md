@@ -6,9 +6,9 @@
 
 ## 更新檔下載連結
 
-1.Google Drived：https://drive.google.com/drive/u/2/folders/1df_d3WwyNwN_5a1xjOPlaxv0U6i8O7o6
+Google Drived：https://drive.google.com/drive/u/2/folders/1df_d3WwyNwN_5a1xjOPlaxv0U6i8O7o6
 
-2.Github：https://github.com/printfChins/Beyblade-RPM-Detector-Device/tree/main/update%20file
+Github：https://github.com/printfChins/Beyblade-RPM-Detector-Device/tree/main/update%20file
 
 BRD_BLE_OLED:藍芽與OLED版本
 BRD_OLED:無藍芽版本
