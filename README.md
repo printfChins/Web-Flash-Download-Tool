@@ -15,7 +15,11 @@ BRD 裝置韌體線上燒錄工具，可透過瀏覽器選擇韌體檔案並寫�
 
 ## 使用方式
 
-### 1. 選擇燒錄檔並點擊燒錄
+### 1. 使用數據線連接裝置於電腦
+
+!!! 請注意需使用數據線，而非充電線 !!!
+
+### 2. 選擇燒錄檔並點擊燒錄
 
 選擇要更新的韌體檔案後，點擊燒錄按鈕開始操作。
 
@@ -23,7 +27,7 @@ BRD 裝置韌體線上燒錄工具，可透過瀏覽器選擇韌體檔案並寫�
   <img width="631" height="277" alt="選擇燒錄檔並開始燒錄" src="https://github.com/user-attachments/assets/0d7b90b8-9a98-4f4d-8d89-85aa5e7e2ad7" />
 </p>
 
-### 2. 選擇 COM Port
+### 3. 選擇 COM Port
 
 在瀏覽器跳出的連接視窗中，選擇：
 
@@ -33,7 +37,7 @@ BRD 裝置韌體線上燒錄工具，可透過瀏覽器選擇韌體檔案並寫�
   <img width="479" height="472" alt="選擇 USB JTAG Serial Debug Unit COM Port" src="https://github.com/user-attachments/assets/0978bc90-d744-4bbe-986b-a27c690e1ca5" />
 </p>
 
-### 3. 等待燒錄完成
+### 4. 等待燒錄完成
 
 等待燒錄進度完成，畫面顯示 **100%** 即完成韌體燒錄。
 
