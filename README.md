@@ -1,83 +1,77 @@
-# ESP32-C3 Web Flash Download Tool
+# BRD Web Flash Download Tool
 
-可直接部署至 GitHub Pages 的 ESP32-C3 UART 網頁燒錄工具。
+BRD 裝置韌體線上燒錄工具，可透過瀏覽器選擇韌體檔案並寫入裝置。
 
-## 固定規格
+## V1.2 藍牙 OTA
 
-| 項目 | 設定 |
-|---|---|
-| 目標晶片 | ESP32-C3 |
-| 燒錄檔大小 | 4,194,304 bytes（4096 KB） |
-| 寫入起始位址 | 0x000000 |
-| Flash Size | 4 MB |
-| 燒錄流程 | 連線、整顆擦除、寫入、雜湊校驗、重啟 |
+[V1.2 新增] 網站提供 USB 燒錄 / 藍牙 OTA 切換，保持共用 BIN 上傳區。裝置端需先安裝 BRD BPX V1.2。
 
-## 專案結構
+| 更新方式 | 選擇的檔案 | 設定與歷史 |
+|---|---|---|
+| USB 燒錄 | 完整 4 MB `BRD_BPX.ino.merged.bin` | 沿用完整擦除流程，會清除 |
+| 藍牙 OTA | 純 app `BRD_BPX.ino.bin` | 僅寫備用 app 分區，保留 |
 
-```text
-Web-Flash-Download-Tool/
-├── .github/
-│   └── workflows/
-│       └── deploy-pages.yml
-├── dist/
-│   ├── .nojekyll
-│   ├── index.html
-│   ├── styles.css
-│   └── app.js
-└── README.md
-```
+第一次由 V1.1 安裝 V1.2 必須使用 USB。後續才可選藍牙 OTA：解除裝載、停止轉動、等待最後一筆歷史保存；SOC 至少 20% 或正在充電且電池讀取有效。若已啟用充電關閉 BLE，需先讓 BLE 恢復才能連線。
 
-## 部署至 GitHub Pages
+網頁以 Web Bluetooth 分包傳送，依裝置確認位移更新進度；Notify 遺失先 READ，必要時重傳最後一包。校驗前最多 99%，裝置完成串流及 Flash 讀回 MD5、映像驗證及分區提交後才顯示 100%。裝置約 5 秒後重啟。
 
-1. 在 GitHub 建立新的 Repository。
-2. 將本專案內的所有檔案推送到 `main` 分支。
-3. 進入 Repository 的 `Settings > Pages`。
-4. 將 `Source` 設為 `GitHub Actions`。
-5. 等待 `Deploy GitHub Pages` 工作流程完成。
-6. 使用 GitHub Pages 提供的 HTTPS 網址開啟工具。
+傳輸期間可取消；取消會等待目前 GATT 操作完成再送 ABORT。校驗/提交期間取消按鈕停用。斷線後重新連線並從頭更新，不支援跨斷線續傳。
 
-## 使用限制
+支援環境：電腦 Chrome/Edge、Android Chrome，必須 HTTPS 或 localhost。iPhone/iPad 一般瀏覽器需要另以原生 BLE App 支援。
 
-- 必須使用支援 Web Serial 的桌面版 Chrome 或 Microsoft Edge。
-- 必須透過 HTTPS 或 localhost 開啟。
-- USB UART 必須使用 3.3 V 邏輯準位。
-- iPhone 與 iPad 的 Safari 不支援此燒錄方式。
-- 燒錄時會清除 ESP32-C3 全部 Flash 資料。
+協議及 UUID 見 [OTA_PROTOCOL.md](OTA_PROTOCOL.md)。不更動現有裝置的 BBP 廣播 UUID，透過 optionalServices 取得獨立 OTA 服務。
 
-## ESP32-C3 手動進入 Download Mode
+## 開發驗證
 
-若開發板無法自動進入燒錄模式：
+`npm test`：十項原生 Node 協議測試。`npm run check`：JavaScript 語法檢查。無執行期 npm 套件安裝需求。
 
-1. 按住 BOOT，使 GPIO9 維持 LOW。
-2. 短按 RESET。
-3. 放開 BOOT。
-4. 回到網站重新執行燒錄。
+`node tests/ui-smoke.mjs`：選配 Playwright 桌面/手機版面及 BLE/USB 操作測試，需要安裝 Playwright 與 Chromium。本交付環境有 Playwright 但無瀏覽器，該項未完成執行；未進行 ESP32-C3 MCU 編譯或硬體 OTA 實測。
 
-## V1.0.1 修改
+合併至 main 後，既有 deploy-pages.yml 將 dist 部署至 GitHub Pages；草稿 PR 不會發布網站。
 
-- [刪減] dist/index.html：移除四個燒錄設定欄位。
-- [新增] dist/app.js：固定鮑率 460800，移除選單存取。
-- [刪減] dist/styles.css：移除設定區塊專用樣式。
-- 固定位址 0x000000、4096 KB 大小檢查、4 MB 燒錄參數維持。
-- 部署時覆蓋專案根目錄內的 dist 資料夾。本版尚未實體燒錄驗證。
+## 線上燒錄工具
 
-## V1.0.2 修改
+[開啟 BRD Web Flash Download Tool](https://printfchins.github.io/Web-Flash-Download-Tool/)
 
-- [刪減] dist/index.html：移除右上角 TARGET、ESP32-C3、0x000000 / 4 MB 資訊區塊。
-- [刪減] dist/styles.css：移除 target-badge 專用樣式。
-- 延續 V1.0.1，四個設定欄位不顯示；鮑率固定 460800。
-- 本次僅修改顯示，未修改燒錄邏輯。
+## 韌體更新檔下載
 
-## V1.0.3 修改
+- [Google Drive](https://drive.google.com/drive/u/2/folders/1df_d3WwyNwN_5a1xjOPlaxv0U6i8O7o6)
+- [GitHub](https://github.com/printfChins/Beyblade-RPM-Detector-Device/tree/main/update%20file)
 
-- [刪減] dist/index.html：移除注意與擦除提示文字區塊。
-- [刪減] dist/styles.css：移除 safety-note 專用樣式。
-- 包含 V1.0.1 與 V1.0.2 的顯示調整。
-- 實際燒錄仍會先擦除整顆 Flash，燒錄邏輯未變更。
+---
 
-## V1.0.4 修改
+## 使用方式
 
-- [新增] dist/styles.css：燒錄按鈕懸停上浮、背景變亮、陰影發光與箭頭右移。
-- 僅在按鈕可操作時生效；按下時回到原位。
-- 支援鍵盤焦點框及 prefers-reduced-motion。
-- 包含 V1.0.3 所有修改；HTML 與燒錄程式未修改。
+### 參考文章
+
+-[Threads](https://www.threads.com/share/BAaVu8yc1i/)
+
+### 1. 使用數據線連接裝置於電腦
+
+!!! 請注意需使用數據線，而非充電線 !!!
+
+### 2. 選擇燒錄檔並點擊燒錄
+
+選擇要更新的韌體檔案後，點擊燒錄按鈕開始操作。
+
+<p align="center">
+  <img width="631" height="277" alt="選擇燒錄檔並開始燒錄" src="https://github.com/user-attachments/assets/0d7b90b8-9a98-4f4d-8d89-85aa5e7e2ad7" />
+</p>
+
+### 3. 選擇 COM Port
+
+在瀏覽器跳出的連接視窗中，選擇：
+
+`USB JTAG/Serial debug unit`
+
+<p align="center">
+  <img width="479" height="472" alt="選擇 USB JTAG Serial Debug Unit COM Port" src="https://github.com/user-attachments/assets/0978bc90-d744-4bbe-986b-a27c690e1ca5" />
+</p>
+
+### 4. 等待燒錄完成
+
+等待燒錄進度完成，畫面顯示 **100%** 即完成韌體燒錄。
+
+<p align="center">
+  <img width="590" height="451" alt="燒錄完成顯示 100%" src="https://github.com/user-attachments/assets/7b7cb53e-86a8-4bf8-b3a0-f0c09e3a4de8" />
+</p>

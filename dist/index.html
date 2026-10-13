@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#07131f">
-  <meta name="description" content="ESP32-C3 4096 KB 完整 Flash 映像 UART 燒錄工具">
+  <meta name="description" content="BRD ESP32-C3 USB 燒錄與 BLE OTA 韌體更新工具">
   <title>BRD Flash Download Tool</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307131f'/%3E%3Cpath d='M20 17h24v30H20z' fill='none' stroke='%2338d9ff' stroke-width='5'/%3E%3Cpath d='M13 24h7m-7 8h7m-7 8h7m24-16h7m-7 8h7m-7 8h7' stroke='%23f4b942' stroke-width='4'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
@@ -13,7 +13,7 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">UART FLASH UTILITY</p>
+        <p class="eyebrow">USB / BLE OTA</p>
         <h1>BRD<br><span>Flash Download Tool</span></h1>
       </div>
       <!-- [V1.0.2 刪減] 移除右上角 TARGET 資訊區塊。 -->
@@ -21,9 +21,15 @@
 
     <section class="workspace" aria-label="燒錄工具">
       <div class="control-panel">
+        <!-- [V1.2 新增] 選擇更新方式；檔案上傳入口共用。 -->
+        <div class="mode-switch" role="group" aria-label="更新方式">
+          <button id="modeUsb" type="button" aria-pressed="true">USB 燒錄</button>
+          <button id="modeBle" type="button" aria-pressed="false">藍牙 OTA</button>
+        </div>
+        <p class="mode-hint" id="modeHint"></p>
         <div class="step-heading">
           <span>01</span>
-          <div><h2>選擇完整映像</h2><p></p></div>
+          <div><h2 id="fileHeading">選擇完整映像</h2><p></p></div>
         </div>
 
         <!-- [保留] 原本拖曳 / 點擊上傳 BIN 的 UI。 -->
@@ -39,7 +45,7 @@
 
         <button class="flash-button" id="flashButton" type="button" disabled>
           <span id="buttonText">請先選擇燒錄檔</span>
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true">&gt;</span>
         </button>
         <button class="disconnect-button" id="disconnectButton" type="button" hidden>中斷連線</button>
       </div>
@@ -78,7 +84,7 @@
     </footer>
   </main>
 
-  <div class="browser-warning" id="browserWarning" hidden>
+  <div class="browser-warning" id="browserWarning" role="status" hidden>
     此瀏覽器不支援 Web Serial。請改用桌面版 Chrome 或 Microsoft Edge。
   </div>
 

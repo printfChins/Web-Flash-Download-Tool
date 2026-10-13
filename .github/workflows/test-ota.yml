@@ -1,0 +1,19 @@
+# [V1.2 新增] 草稿 PR / 分支上的 OTA 協議及語法驗證，不發布網站。
+name: Test BLE OTA
+on:
+  pull_request:
+  push:
+    branches: ["feat/ble-ota-v1.2"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/ota.test.mjs
+      - run: node --check dist/app.js
+      - run: node --check dist/ota-protocol.js

@@ -13,6 +13,8 @@
 }
 
 * { box-sizing: border-box; }
+/* [V1.2 新增] 確保元件樣式不覆寫 hidden，例如取消按鈕與瀏覽器提示。 */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -46,6 +48,13 @@ h1 span { color: var(--muted); font-weight: 450; }
 .step-heading > span { color: var(--yellow); font: 700 1rem ui-monospace, monospace; }
 h2 { margin: 0; font-size: 1.25rem; }
 .step-heading p { margin: 4px 0 0; color: var(--muted); font-size: .88rem; }
+/* [V1.2 新增] 共用上傳區上方的 USB / BLE 模式切換。 */
+.mode-switch { display: flex; gap: 8px; margin-bottom: 12px; }
+.mode-switch button { flex: 1; min-height: 44px; padding: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer; }
+.mode-switch button[aria-pressed="true"] { border-color: var(--cyan); background: rgba(56,217,255,.10); color: var(--cyan); }
+.mode-switch button:disabled { cursor: not-allowed; opacity: .55; }
+.mode-switch button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.mode-hint { min-height: 44px; margin: 0 0 22px; color: var(--muted); font-size: .82rem; line-height: 1.6; }
 
 .drop-zone { display: grid; place-items: center; min-height: 174px; padding: 22px; border: 1px dashed #36566c; background: rgba(15,36,52,.52); cursor: pointer; text-align: center; transition: .2s ease; }
 .drop-zone:hover, .drop-zone.dragging { border-color: var(--cyan); background: rgba(56,217,255,.08); }
@@ -139,5 +148,3 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
-
-
