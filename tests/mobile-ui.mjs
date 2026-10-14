@@ -85,7 +85,7 @@ try {
       assert.deepEqual(errors, []);
     } finally { await context.close(); }
   });
-  for (const [width, height] of [[320, 280], [320, 568], [360, 640], [390, 844], [430, 932], [844, 390]]) {
+  for (const [width, height] of [[320, 280], [320, 568], [360, 640], [390, 844], [430, 932], [844, 390], [1024, 768], [1280, 720]]) {
     await test(`touch controls, long filenames and unsupported-browser warning fit ${width}x${height}`, async () => {
       const { context, page, errors } = await mobilePage({ width, height });
       try {
@@ -98,6 +98,14 @@ try {
         assert.equal(await page.locator('#modeBle').isEnabled(), true);
         assert.equal(await page.locator('#browserWarning').isVisible(), true);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no horizontal page overflow');
+        /* [新增] 手機直向、橫向及較寬的觸控視窗：操作區在上，狀態區完整排列在下。 */
+        const vertical = await page.evaluate(() => {
+          const control = document.querySelector('.control-panel').getBoundingClientRect();
+          const monitor = document.querySelector('.monitor-panel').getBoundingClientRect();
+          return monitor.top >= control.bottom - 1 && Math.abs(control.left - monitor.left) < 1
+            && Math.abs(control.width - monitor.width) < 1;
+        });
+        assert.equal(vertical, true, 'file and OTA controls must be above the status panel');
         for (const id of ['modeUsb', 'modeBle', 'dropZone', 'clearLog']) {
           await page.locator('#' + id).scrollIntoViewIfNeeded();
           const unobstructed = await page.locator('#' + id).evaluate(el => {

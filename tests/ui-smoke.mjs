@@ -60,6 +60,12 @@ try {
     window.testOta = s;
   });
   await page.goto('http://127.0.0.1:' + server.address().port + '/');
+  /* [新增] 桌面仍為左側操作、右側狀態，手機排列不影響桌面版。 */
+  assert.equal(await page.evaluate(() => {
+    const control = document.querySelector('.control-panel').getBoundingClientRect();
+    const monitor = document.querySelector('.monitor-panel').getBoundingClientRect();
+    return monitor.left >= control.right - 1 && Math.abs(control.top - monitor.top) < 1;
+  }), true);
   await page.getByRole('button', { name: '藍牙 OTA', exact: true }).click({ timeout: 5000 });
   const bytes = Buffer.alloc(160, 0x55); bytes[0] = 0xe9; bytes[12] = 5; bytes[13] = 0;
   bytes.writeUInt32LE(0xabcd5432, 32); bytes.write('BRD_BPX_OTA_IMAGE_V1_C3', 70);
