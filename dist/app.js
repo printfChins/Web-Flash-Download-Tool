@@ -3,6 +3,7 @@
  * 貼放位置: 完整替換原 app.js。
  * [V1.2 新增] USB / BLE OTA 切換、相容檔案檢查、裝置確認進度與取消。
  * [V1.2 修改] esptool-js 於 USB 操作才載入，BLE 不依賴序列埠套件。
+ * [V1.2 手機修正 新增] 依瀏覽器能力選擇預設模式，提示不影響選檔與切換。
  */
 import { OtaClient, UUIDS, validateFirmware } from "./ota-protocol.js";
 const IMAGE_SIZE = 4 * 1024 * 1024;
@@ -54,21 +55,23 @@ function setStage(index) {
   });
 }
 function resetStages() { elements.stages.forEach(stage => stage.classList.remove("active", "done")); }
-function supported() {
-  return window.isSecureContext && (mode === "usb"
+function supported(kind = mode) {
+  return window.isSecureContext && (kind === "usb"
     ? typeof navigator.serial?.requestPort === "function" : typeof navigator.bluetooth?.requestDevice === "function");
 }
 function updateControls() {
   elements.input.disabled = busy; elements.modeUsb.disabled = busy; elements.modeBle.disabled = busy;
+  elements.dropZone.setAttribute("aria-disabled", String(busy));
   elements.flashButton.disabled = busy || !firmwareFile || !firmwareBytes || !supported();
   elements.buttonText.textContent = busy ? (verifying ? "正在校驗韌體" : "更新進行中")
-    : firmwareFile ? (mode === "ble" ? "連接藍牙並開始更新" : "連接並開始燒錄") : "請先選擇燒錄檔";
+    : firmwareFile ? (!supported() ? (mode === "ble" ? "此瀏覽器無法進行藍牙更新" : "此瀏覽器無法進行 USB 燒錄")
+      : mode === "ble" ? "連接藍牙並開始更新" : "連接並開始燒錄") : "請先選擇燒錄檔";
   elements.disconnectButton.hidden = !busy; elements.disconnectButton.disabled = verifying;
   elements.disconnectButton.textContent = verifying ? "校驗中，請等待完成" : "取消更新";
   elements.warning.hidden = supported();
   elements.warning.textContent = !window.isSecureContext ? "請透過 HTTPS 或 localhost 開啟此工具。"
-    : mode === "ble" ? "此瀏覽器不支援 Web Bluetooth。請使用電腦 Chrome / Edge 或 Android Chrome；iPhone / iPad 需原生 BLE App。"
-    : "此瀏覽器不支援 USB Web Serial。請使用電腦 Chrome 或 Edge。";
+    : mode === "ble" ? "此瀏覽器不支援藍牙更新。Android 請用 Chrome 開啟；iPhone / iPad 一般瀏覽器需另用原生 BLE App。"
+    : "USB 燒錄需使用電腦 Chrome / Edge。Android 手機請切換藍牙 OTA，並用 Chrome 開啟。";
 }
 function checkFile(file, value) {
   if (!file || !file.name.toLowerCase().endsWith(".bin")) throw new Error("僅允許選擇 .bin 燒錄檔。");
@@ -248,4 +251,5 @@ for (const name of ["dragleave", "drop"]) elements.dropZone.addEventListener(nam
   event.preventDefault(); elements.dropZone.classList.remove("dragging");
 });
 elements.dropZone.addEventListener("drop", event => { if (!busy) void selectFile(event.dataTransfer.files[0]); });
-changeMode("usb");
+/* [V1.2 手機修正 修改] 有 BLE、無 Serial 的手機直接顯示可用的 OTA 操作。 */
+changeMode(supported("ble") && !supported("usb") ? "ble" : "usb");

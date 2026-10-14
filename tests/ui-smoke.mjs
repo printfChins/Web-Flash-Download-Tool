@@ -1,5 +1,6 @@
 /* [V1.2 新增] 瀏覽器操作驗證；GATT / Serial 位於測試硬體邊界。 */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -20,16 +21,17 @@ const server = createServer(async (req, res) => {
 await new Promise(done => server.listen(0, '127.0.0.1', done));
 let browser;
 try {
-  browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.route('https://cdn.jsdelivr.net/**', route => route.fulfill({ contentType: 'text/javascript', body:
-    'window.CryptoJS={lib:{WordArray:{create:x=>x}},enc:{Latin1:{parse:x=>x}},MD5:()=>({toString:()=>"00000000000000000000000000000000"})};' }));
+  /* [V1.2 手機修正 修改] 禁止外部校驗 CDN，驗證網站內建套件的真實 MD5 結果。 */
+  await page.route('https://cdn.jsdelivr.net/**', route => route.abort());
   await page.route('https://unpkg.com/**', route => route.fulfill({ contentType: 'text/javascript', body:
-    'export class Transport {async disconnect(){}};export class ESPLoader {async main(){return "ESP32-C3"} async writeFlash(o){o.reportProgress(0,1,1)} async after(){}};' }));
+    'export class Transport {async disconnect(){}};export class ESPLoader {async main(){return "ESP32-C3"} async writeFlash(o){window.testUsbMd5=o.calculateMD5Hash(o.fileArray[0].data);o.reportProgress(0,1,1)} async after(){}};' }));
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'serial', { configurable: true, value: { requestPort: async () => ({}) } });
-    const s = { offset: 0, total: 0, phase: 0, end: 0, abort: 0 };
+    const s = { offset: 0, total: 0, phase: 0, end: 0, abort: 0, hash: null };
     class Char extends EventTarget {
       constructor(kind) { super(); this.kind = kind; }
       async startNotifications() { return this; }
@@ -38,6 +40,7 @@ try {
       async writeValueWithoutResponse(p) { return this.writeValueWithResponse(p); }
       async writeValueWithResponse(p) {
         const b = new Uint8Array(p); const v = new DataView(b.buffer);
+        if (b[0] === 2) s.hash = Array.from(b.subarray(2));
         if (b[0] === 3) { s.total = v.getUint32(2, true); s.offset = 0; s.phase = 1; }
         if (b[0] === 16) s.offset = v.getUint32(2, true) + b.length - 6;
         if (b[0] === 4) { s.phase = 2; s.end++; }
@@ -66,6 +69,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#statusPill').textContent === '更新完成');
   assert.equal(await page.locator('#progressText').textContent(), '100%');
   assert.equal(await page.evaluate(() => window.testOta.end), 1);
+  assert.deepEqual(await page.evaluate(() => window.testOta.hash), Array.from(createHash('md5').update(bytes).digest()));
   await page.getByRole('button', { name: 'USB 燒錄', exact: true }).click();
   assert.equal(await page.locator('#flashButton').isDisabled(), true, 'raw app cannot be flashed at 0x0');
   const merged = Buffer.alloc(4 * 1024 * 1024, 0xff); merged[0] = 0xe9; merged[12] = 5; merged[13] = 0;
@@ -74,6 +78,7 @@ try {
   await page.locator('#flashButton').click();
   await page.waitForFunction(() => document.querySelector('#statusPill').textContent === '燒錄完成');
   assert.equal(await page.locator('#progressText').textContent(), '100%');
+  assert.equal(await page.evaluate(() => window.testUsbMd5), createHash('md5').update(merged).digest('hex'));
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
   assert.deepEqual(errors, []);

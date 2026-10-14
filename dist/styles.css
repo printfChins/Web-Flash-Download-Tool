@@ -18,8 +18,12 @@
 
 body {
   margin: 0;
-  min-width: 320px;
+  /* [V1.2 手機修正 修改] 視窗縮小時不以固定最小寬度撐開頁面。 */
+  min-width: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   background:
     linear-gradient(rgba(56, 217, 255, .035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(56, 217, 255, .035) 1px, transparent 1px),
@@ -31,6 +35,8 @@ body {
 }
 
 button, select, input { font: inherit; }
+/* [V1.2 手機修正 新增] 原生 click / touch 操作，不攔截瀏覽器的觸控事件。 */
+button, .drop-zone input { touch-action: manipulation; }
 
 .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding: 42px 0 24px; }
 .topbar { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 28px; }
@@ -42,7 +48,7 @@ h1 span { color: var(--muted); font-weight: 450; }
 
 
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .92fr); border: 1px solid var(--line); background: rgba(7,19,31,.88); box-shadow: 0 28px 90px rgba(0,0,0,.35); }
-.control-panel, .monitor-panel { padding: clamp(22px, 4vw, 38px); }
+.control-panel, .monitor-panel { min-width: 0; padding: clamp(22px, 4vw, 38px); }
 .monitor-panel { border-left: 1px solid var(--line); background: linear-gradient(145deg, rgba(15,36,52,.75), rgba(7,19,31,.25)); }
 .step-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .step-heading > span { color: var(--yellow); font: 700 1rem ui-monospace, monospace; }
@@ -50,23 +56,29 @@ h2 { margin: 0; font-size: 1.25rem; }
 .step-heading p { margin: 4px 0 0; color: var(--muted); font-size: .88rem; }
 /* [V1.2 新增] 共用上傳區上方的 USB / BLE 模式切換。 */
 .mode-switch { display: flex; gap: 8px; margin-bottom: 12px; }
-.mode-switch button { flex: 1; min-height: 44px; padding: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer; }
+.mode-switch button { flex: 1; min-width: 0; min-height: 48px; padding: 10px 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); cursor: pointer; }
 .mode-switch button[aria-pressed="true"] { border-color: var(--cyan); background: rgba(56,217,255,.10); color: var(--cyan); }
 .mode-switch button:disabled { cursor: not-allowed; opacity: .55; }
 .mode-switch button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 .mode-hint { min-height: 44px; margin: 0 0 22px; color: var(--muted); font-size: .82rem; line-height: 1.6; }
 
-.drop-zone { display: grid; place-items: center; min-height: 174px; padding: 22px; border: 1px dashed #36566c; background: rgba(15,36,52,.52); cursor: pointer; text-align: center; transition: .2s ease; }
+.drop-zone { position: relative; isolation: isolate; display: grid; place-items: center; min-width: 0; min-height: 174px; padding: 22px; border: 1px dashed #36566c; background: rgba(15,36,52,.52); cursor: pointer; text-align: center; transition: .2s ease; }
 .drop-zone:hover, .drop-zone.dragging { border-color: var(--cyan); background: rgba(56,217,255,.08); }
 .drop-zone.valid { border-style: solid; border-color: var(--green); }
 .drop-zone.invalid { border-color: var(--red); }
-.drop-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+/* [V1.2 手機修正 修改] 透明原生輸入框只覆蓋自己的上傳區，手機直接點擊即可開啟選檔。 */
+.drop-zone input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.drop-zone:focus-within { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.drop-zone[aria-disabled="true"] { opacity: .6; }
+.drop-zone input:disabled { cursor: wait; }
 .file-icon { display: grid; place-items: center; width: 52px; height: 62px; margin-bottom: 13px; border: 2px solid var(--cyan); color: var(--cyan); font: 800 .78rem ui-monospace, monospace; clip-path: polygon(0 0, 72% 0, 100% 24%, 100% 100%, 0 100%); }
-.drop-zone strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drop-zone small { margin-top: 7px; color: var(--muted); }
+.drop-zone strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.drop-zone small { min-width: 0; max-width: 100%; margin-top: 7px; color: var(--muted); overflow-wrap: anywhere; }
 
 
-.flash-button, .disconnect-button { width: 100%; min-height: 58px; margin-top: 20px; padding: 0 19px; border: 0; cursor: pointer; }
+.flash-button, .disconnect-button { width: 100%; min-height: 58px; margin-top: 20px; padding: 12px 19px; border: 0; cursor: pointer; }
+.flash-button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.flash-button > span:last-child { flex: none; margin-left: 10px; }
 .flash-button { display: flex; justify-content: space-between; align-items: center; background: var(--cyan); color: #031019; font-weight: 800; }
 .flash-button:disabled { cursor: not-allowed; background: #203744; color: #6e8797; }
 .disconnect-button { margin-top: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
@@ -78,7 +90,8 @@ h2 { margin: 0; font-size: 1.25rem; }
 .status-pill[data-state="error"] { border-color: var(--red); color: var(--red); }
 .progress-block { margin: 28px 0; }
 .progress-label { display: flex; justify-content: space-between; margin-bottom: 9px; color: var(--muted); font-size: .84rem; }
-.progress-label strong { color: var(--text); font-family: ui-monospace, monospace; }
+.progress-label > span { min-width: 0; overflow-wrap: anywhere; }
+.progress-label strong { flex: none; margin-left: 12px; color: var(--text); font-family: ui-monospace, monospace; }
 .progress-track { height: 7px; overflow: hidden; background: #172d3d; }
 .progress-track div { width: 0; height: 100%; background: linear-gradient(90deg, var(--yellow), var(--cyan)); transition: width .15s linear; }
 .stage-list { margin: 0 0 24px; padding: 0; list-style: none; }
@@ -88,28 +101,35 @@ h2 { margin: 0; font-size: 1.25rem; }
 .stage-list li.active > span { color: var(--yellow); }
 .stage-list li.done > span { color: var(--green); }
 .stage-list strong, .stage-list small { display: block; }
+.stage-list li > div { min-width: 0; overflow-wrap: anywhere; }
 .stage-list strong { font-size: .9rem; }
 .stage-list small { margin-top: 3px; color: var(--muted); font-size: .74rem; }
 
 .terminal { overflow: hidden; border: 1px solid var(--line); background: #04101a; }
-.terminal-title { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px; border-bottom: 1px solid var(--line); background: #0e2231; }
+.terminal-title { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 11px; border-bottom: 1px solid var(--line); background: #0e2231; }
 .terminal-title > span { width: 8px; height: 8px; border-radius: 50%; background: #345064; }
 .terminal-title strong { margin-left: 6px; color: var(--muted); font: 700 .67rem ui-monospace, monospace; letter-spacing: .1em; }
-.terminal-title button { margin-left: auto; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: .75rem; }
+.terminal-title button { min-width: 48px; min-height: 44px; margin-left: auto; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: .75rem; }
 pre { height: 190px; margin: 0; padding: 13px; overflow: auto; color: #9cc4d6; font: .75rem/1.55 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
 footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px 2px 0; color: var(--muted); font-size: .78rem; }
-.browser-warning { position: fixed; inset: auto 18px 18px; padding: 14px 18px; border: 1px solid var(--red); background: #2a1118; color: #ffd9df; text-align: center; }
+/* [V1.2 手機修正 修改] 不浮動、不遮住按鈕；提示可依手機寬度正常換行。 */
+.browser-warning { margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--red); background: #2a1118; color: #ffd9df; font-size: .82rem; line-height: 1.65; overflow-wrap: anywhere; }
 
 @media (max-width: 820px) {
-  .shell { width: min(100% - 24px, 620px); padding-top: 24px; }
+  .shell { width: min(calc(100% - 24px), 620px); padding-top: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
   .topbar { align-items: start; }
-  .workspace { grid-template-columns: 1fr; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
   .monitor-panel { border-top: 1px solid var(--line); border-left: 0; }
 }
 
 @media (max-width: 540px) {
   .topbar { display: block; }
-
+  /* [V1.2 手機修正 新增] 小螢幕維持足夠的文字與觸控空間。 */
+  .control-panel, .monitor-panel { padding: 20px 16px; }
+  .mode-switch button { font-size: 1rem; }
+  .mode-hint { min-height: 0; }
+  .drop-zone { min-height: 170px; padding: 20px 16px; }
+  .monitor-header { gap: 10px; }
   footer { display: block; }
 }
 

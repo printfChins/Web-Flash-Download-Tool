@@ -2,12 +2,13 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- [V1.2 手機修正 修改] 支援手機安全區域與正常縮放。 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07131f">
   <meta name="description" content="BRD ESP32-C3 USB 燒錄與 BLE OTA 韌體更新工具">
   <title>BRD Flash Download Tool</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307131f'/%3E%3Cpath d='M20 17h24v30H20z' fill='none' stroke='%2338d9ff' stroke-width='5'/%3E%3Cpath d='M13 24h7m-7 8h7m-7 8h7m24-16h7m-7 8h7m-7 8h7' stroke='%23f4b942' stroke-width='4'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=1.2-mobile1">
 </head>
 <body>
   <main class="shell">
@@ -27,14 +28,17 @@
           <button id="modeBle" type="button" aria-pressed="false">藍牙 OTA</button>
         </div>
         <p class="mode-hint" id="modeHint"></p>
+        <!-- [V1.2 手機修正 修改] 提示放在操作區內，不使用覆蓋畫面的浮動區塊。 -->
+        <div class="browser-warning" id="browserWarning" role="status" hidden></div>
         <div class="step-heading">
           <span>01</span>
           <div><h2 id="fileHeading">選擇完整映像</h2><p></p></div>
         </div>
 
-        <!-- [保留] 原本拖曳 / 點擊上傳 BIN 的 UI。 -->
+        <!-- [V1.2 手機修正 修改] 以整個上傳區的原生 input 接收觸控，避免 1px 隱藏輸入框。 -->
         <label class="drop-zone" id="dropZone" for="firmwareInput">
-          <input id="firmwareInput" type="file" accept=".bin,application/octet-stream">
+          <!-- [V1.2 手機修正 刪減] 移除 accept 過濾，避免手機將 MIME 未知的 BIN 設為不可選；副檔名與映像仍由程式檢查。 -->
+          <input id="firmwareInput" type="file" aria-label="選擇 BIN 韌體檔案" aria-describedby="fileMeta">
           <span class="file-icon" aria-hidden="true">BIN</span>
           <strong id="fileName">選擇 BIN</strong>
           <small id="fileMeta">點擊選擇，或將檔案拖曳至此</small>
@@ -84,11 +88,8 @@
     </footer>
   </main>
 
-  <div class="browser-warning" id="browserWarning" role="status" hidden>
-    此瀏覽器不支援 Web Serial。請改用桌面版 Chrome 或 Microsoft Edge。
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
-  <script type="module" src="./app.js"></script>
+  <!-- [V1.2 手機修正 修改] 校驗套件隨網站部署，避免外部 CDN 等待使操作介面無反應。 -->
+  <script defer src="./vendor/crypto-js.min.js?v=4.2.0"></script>
+  <script type="module" src="./app.js?v=1.2-mobile1"></script>
 </body>
 </html>
