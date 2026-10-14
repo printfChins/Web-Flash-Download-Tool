@@ -3,15 +3,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { OtaClient, validateFirmware, decodeStatus, UUIDS } from '../dist/ota-protocol.js';
-function firmware() {
-  const b = new Uint8Array(160).fill(0x55); b[0] = 0xe9; b[12] = 5; b[13] = 0;
+function firmware(size = 160) {
+  const b = new Uint8Array(size).fill(0x55); b[0] = 0xe9; b[12] = 5; b[13] = 0;
   new DataView(b.buffer).setUint32(32, 0xabcd5432, true);
   b.set(new TextEncoder().encode('BRD_BPX_OTA_IMAGE_V1_C3'), 70); return b;
 }
-function status(op, id, result, phase, offset, total, maxData = 14) {
+function status(op, id, result, phase, offset, total, maxData = 14, flags = 6) {
   const b = new Uint8Array(20); const v = new DataView(b.buffer);
   b.set([op, id, result, phase]); v.setUint32(4, offset, true); v.setUint32(8, total, true);
-  v.setUint32(12, 0x140000, true); v.setUint16(16, maxData, true); b[18] = 6; b[19] = 1;
+  v.setUint32(12, 0x140000, true); v.setUint16(16, maxData, true); b[18] = flags; b[19] = 1;
   return b;
 }
 class Characteristic extends EventTarget {
@@ -24,7 +24,9 @@ class Characteristic extends EventTarget {
   emit(bytes) { this.value = new DataView(bytes.buffer.slice(0)); this.dispatchEvent(new Event('characteristicvaluechanged')); }
 }
 class Device {
-  constructor() {
+  constructor({ batch = false, dropPacket = -1, maxData = 14, dropSync = false } = {}) {
+    this.maxData = maxData; this.dropSync = dropSync;
+    this.batch = batch; this.dropPacket = dropPacket; this.dataCount = 0; this.batchMode = false;
     this.control = new Characteristic(this, 'control'); this.data = new Characteristic(this, 'data');
     this.status = new Characteristic(this, 'status'); this.read = status(1, 7, 0, 0, 0, 0);
     this.phase = 0; this.offset = 0; this.total = 0; this.image = []; this.hash = null;
@@ -33,13 +35,17 @@ class Device {
   }
   receive(characteristic, p) {
     assert.equal(characteristic.kind === 'data', p[0] === 16);
-    assert.ok(p.length <= 20, 'MTU=23: ATT payload cannot exceed 20');
+    assert.ok(p.length <= (p[0] === 16 ? this.maxData + 6 : 20), '封包不得超過協商後 ATT Payload');
     this.packets.push(p.slice()); let result = 0; const v = new DataView(p.buffer, p.byteOffset, p.byteLength);
     if (p[0] === 2) { assert.equal(p.length, 18); this.hash = p.slice(2); }
     if (p[0] === 3) { this.total = v.getUint32(2, true); this.phase = 1; this.offset = 0; this.image = []; }
+    if (p[0] === 6) { assert.equal(this.batch, true); this.batchMode = true; }
     if (p[0] === 16) {
+      this.dataCount++;
+      if (this.dataCount === this.dropPacket) return; // 模擬裝置 GATT 佇列掉包
       const offset = v.getUint32(2, true);
       if (offset === this.offset) { this.image.push(...p.slice(6)); this.offset += p.length - 6; this.writes++; }
+      else if (this.batchMode) { /* 包可能晚到或中間有遺失；不修改 offset。 */ }
       else { assert.equal(offset + p.length - 6, this.offset, 'only the last packet can repeat'); }
     }
     if (p[0] === 4) {
@@ -51,10 +57,12 @@ class Device {
       }
     }
     if (p[0] === 5) { this.aborts++; this.phase = 0; }
-    const reply = status(p[0], p[1], result, this.phase, this.offset, this.total);
+    const reply = status(p[0], p[1], result, this.phase, this.offset, this.total, this.maxData, this.batch ? 14 : 6);
+    if (p[0] === 16 && this.batchMode) return; // DATA 不逐包 Notify
     if (p[0] === 16 && this.dropData) { this.dropData = false; return; }
     this.read = reply;
     if (p[0] === 4 && this.dropEnd) { this.dropEnd = false; return; }
+    if (p[0] === 6 && this.dropSync) { this.dropSync = false; return; }
     this.status.emit(reply); this.onReceive?.(p);
   }
 }
@@ -144,4 +152,56 @@ test('cancel waits for an in-flight READ fallback before sending ABORT', async (
   d.control.writeValueWithResponse = async p => { if (reading) overlapping++; return control(p); };
   await assert.rejects(c.transfer(b, md5(b), { signal: cancel.signal }), e => e.name === 'AbortError');
   assert.equal(overlapping, 0); assert.equal(d.aborts, 1); assert.equal(d.ends, 0); c.dispose();
+});
+
+/* [V1.2 新增] 8 包累計 ACK、漏包重傳、相容模式均由主機模擬驗證。 */
+test('batch mode uses cumulative SYNC acknowledgements, without DATA notifications', async () => {
+  const d = new Device({ batch: true }); const c = client(d); const b = firmware(2183);
+  await c.initialize();
+  const modes = [];
+  const done = await c.transfer(b, md5(b), { onMode: (...args) => modes.push(args) });
+  assert.equal(done.phase, 2);
+  assert.deepEqual(modes[0], ['batch', 14, 8]);
+  const synced = d.packets.filter(p => p[0] === 6).length;
+  const dataCount = d.packets.filter(p => p[0] === 16).length;
+  assert.ok(dataCount > 100);
+  assert.ok(synced < dataCount / 5, '8 包傳完才確認一次');
+  assert.deepEqual(Uint8Array.from(d.image), b);
+  c.dispose();
+});
+test('batch mode recovers after one silent DATA loss by cumulative-offset retry', async () => {
+  const d = new Device({ batch: true, dropPacket: 4 }); const c = client(d); const b = firmware(1087);
+  const retries = [];
+  await c.initialize();
+  const done = await c.transfer(b, md5(b), { onRetry: n => retries.push(n) });
+  assert.equal(done.phase, 2); assert.ok(retries.length >= 1);
+  assert.deepEqual(Uint8Array.from(d.image), b);
+  c.dispose();
+});
+test('old firmware without batch flag stays in stop-and-wait mode', async () => {
+  const d = new Device(); const c = client(d); const b = firmware(321);
+  const modes = [];
+  await c.initialize();
+  assert.equal((await c.transfer(b, md5(b), { onMode: (...v) => modes.push(v) })).phase, 2);
+  assert.equal(modes[0][0], 'legacy'); assert.equal(d.packets.filter(p => p[0] === 6).length, 0);
+  c.dispose();
+});
+
+test('MTU 247 sends 238-byte DATA payload and requires fewer SYNC responses', async () => {
+  const d = new Device({ batch: true, maxData: 238 }); const c = client(d); const b = firmware(5003);
+  await c.initialize(); const modes = [];
+  assert.equal((await c.transfer(b, md5(b), { onMode: (...args) => modes.push(args) })).phase, 2);
+  assert.deepEqual(modes[0], ['batch', 238, 8]);
+  const data = d.packets.filter(p => p[0] === 16);
+  assert.equal(data.length, Math.ceil(b.length / 238));
+  assert.equal(Math.max(...data.map(p => p.length)), 244);
+  assert.ok(d.packets.filter(p => p[0] === 6).length < 6);
+  c.dispose();
+});
+test('lost SYNC notification uses read fallback without duplicating committed data', async () => {
+  const d = new Device({ batch: true, dropSync: true }); const c = client(d); const b = firmware(533);
+  await c.initialize();
+  assert.equal((await c.transfer(b, md5(b))).phase, 2);
+  assert.deepEqual(Uint8Array.from(d.image), b);
+  c.dispose();
 });

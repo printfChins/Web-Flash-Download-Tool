@@ -46,3 +46,15 @@ Result：0 OK、1 BAD_LENGTH、2 BUSY、3 POWER、4 SIZE、5 SESSION、6 OFFSET�
 純 app BIN 需 ESP32-C3 chip_id=5、ESP app description magic=0xABCD5432、BRD_BPX_OTA_IMAGE_V1_C3 標記，且大小不超過備用分區。MD5 與標記不是發布者簽章。
 
 OTA 啟動前最後一筆歷史必須發布並成功保存；OTA 期間暫停 GPIO 量測與 NVS 保存。驗證時讀回 Flash 比較 MD5，並在切換分區的原子提交檢查確認連線世代。提交檢查前斷線會中止；提交已開始則不能取消。15 秒無有效傳輸中止，成功後約 5 秒重啟。
+
+
+## V1.2 批次傳輸擴充（2026-10-14）
+
+- [保留] 第 19 Byte protocol_version 維持 `1`，現有 20 Byte 回覆格式不變。
+- [新增] 回覆 `flags` bit3=`0x08` 代表裝置支援累計 ACK。
+- [新增] Control `SYNC=0x06`，格式 `[0x06, id]`。BEGIN 成功後第一次 SYNC 進入批次模式，之後每次 SYNC 回傳已連續接受的 offset。
+- [修改] 批次模式的 DATA 不再逐筆 Notify；每 8 包由瀏覽器傳送 SYNC，依累計 offset 決定是否由缺失處重送。
+- [保留] 沒有呼叫 SYNC 時 DATA 仍逐包回覆。新版網頁遇到不支援旗標的舊裝置，回退至逐包模式。
+- [修改] 本機偏好 MTU=247；有效 DATA bytes 由 `min(240, actual_MTU-9)` 決定，MTU=247 時是 238，MTU=23 時是 14。Web Bluetooth 不能強制提高對端 MTU。
+- [修改] ESP32 端 4096 Bytes RAM 暫存，滿塊寫入 Flash，END 前寫入尾塊。驗證後才允許顯示 100%。
+- [注意] BLE OTA 只更新 App，不更新 partition table。App0/1 1,984 KiB 的調整須 USB 完整更新。

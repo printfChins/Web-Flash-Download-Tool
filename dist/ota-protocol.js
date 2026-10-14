@@ -1,7 +1,7 @@
 /*
  * 檔案位置: Web-Flash-Download-Tool/dist/ota-protocol.js
  * 貼放位置: 與 app.js 同一資料夾，完整新增檔案。
- * [V1.2 新增] 自訂 BRD OTA 協議、MTU 分包、逐包 ACK、READ 備援與重傳。
+ * [V1.2 修改] 支援 8 包累計 ACK (SYNC)；舊韌體自動回退至逐包 ACK。
  * [V1.2 新增] 不依賴 DOM，便於 App 共用協議及主機測試。
  */
 export const UUIDS = Object.freeze({
@@ -11,7 +11,8 @@ export const UUIDS = Object.freeze({
   status: 'c7570013-9040-4c7b-87b1-086ef858ace7',
   discovery: '55c40000-f8eb-11ec-b939-0242ac120002',
 });
-const OP = { INFO: 1, HASH: 2, BEGIN: 3, END: 4, ABORT: 5, DATA: 16 };
+const OP = { INFO: 1, HASH: 2, BEGIN: 3, END: 4, ABORT: 5, SYNC: 6, DATA: 16 };
+const FEATURE_BATCH_ACK = 0x08;
 const RESULT_TEXT = [
   '', '封包長度不正確', '裝置忙碌，請解除裝載並等待量測結束',
   '電量不足或電池讀取異常，請充電後重試', '韌體大小不符合 OTA 分區',
@@ -82,6 +83,8 @@ export class OtaClient {
     this.ackTimeoutMs = options.ackTimeoutMs ?? 1500;
     this.writeTimeoutMs = options.writeTimeoutMs ?? 5000;
     this.maxRetries = options.maxRetries ?? 3;
+    // [V1.2 新增] 批次上限 8；不同平台可透過 options.batchPackets 降低吞吐壓力。
+    this.batchPackets = Math.max(1, Math.min(8, options.batchPackets ?? 8));
     this.pending = null; this.info = null; this.closed = false; this.transferring = false;
     this.listener = event => {
       try { this.deliver(decodeStatus(event.target.value)); }
@@ -140,6 +143,56 @@ export class OtaClient {
     }
     throw timeoutError('ACK_TIMEOUT');
   }
+  /* [V1.2 新增] 只提交一個 GATT write，不等待 DATA Notify；SYNC 再確認累積偏移。
+     同時間只允許一個 GATT 操作；避免桌面或 Android 上的 GATT Busy。 */
+  async sendBatchPacket(packet, signal) {
+    if (this.closed) throw new Error('裝置已斷線，請重新連線後更新。');
+    throwIfAborted(signal);
+    const method = typeof this.data.writeValueWithoutResponse === 'function'
+      ? 'writeValueWithoutResponse' : 'writeValueWithResponse';
+    try {
+      await bounded(this.data[method](packet), this.writeTimeoutMs, undefined, 'WRITE_TIMEOUT');
+    } catch (error) {
+      if (error.code === 'WRITE_TIMEOUT') this.closed = true;
+      throw error;
+    }
+    throwIfAborted(signal);
+  }
+  async sendWindow(image, offset, maxData, { signal, onRetry, onProgress } = {}) {
+    const start = offset;
+    let failures = 0;
+    while (offset < image.length) {
+      throwIfAborted(signal);
+      let windowEnd = offset;
+      for (let i = 0; i < this.batchPackets && windowEnd < image.length; i++) {
+        const length = Math.min(maxData, image.length - windowEnd);
+        const packet = new Uint8Array(6 + length);
+        packet.set([OP.DATA, this.id]);
+        new DataView(packet.buffer).setUint32(2, windowEnd, true);
+        packet.set(image.subarray(windowEnd, windowEnd + length), 6);
+        await this.sendBatchPacket(packet, signal);
+        windowEnd += length;
+      }
+      // [V1.2 新增] SYNC 排在 DATA 後面，裝置回報當前累計接受位移。
+      const ack = await this.request(this.control, Uint8Array.of(OP.SYNC, this.id), { signal, onRetry });
+      if (ack.phase !== 1 || ack.total !== image.length ||
+          ack.offset < offset || ack.offset > windowEnd) {
+        throw new Error('OTA 批次接收位置不一致，已中止更新。');
+      }
+      if (ack.offset === windowEnd) {
+        offset = windowEnd;
+        failures = 0;
+      } else {
+        // [V1.2 新增] 部分封包遺失或裝置佇列滿時，從裝置 ACK 位移重傳缺少的資料。
+        failures++;
+        if (failures > this.maxRetries) throw new Error('OTA 批次重傳超過允許次數。');
+        onRetry?.(failures);
+        offset = ack.offset;
+      }
+      onProgress?.(Math.min(99, offset * 100 / image.length), offset, image.length);
+    }
+    return offset - start;
+  }
   async initialize() {
     this.status.addEventListener('characteristicvaluechanged', this.listener);
     await bounded(this.status.startNotifications(), this.writeTimeoutMs, undefined, 'SUBSCRIBE_TIMEOUT');
@@ -147,7 +200,7 @@ export class OtaClient {
     if (this.info.capacity < 36) throw new Error('裝置沒有可用 OTA 分區，請先使用 USB 燒錄。');
     return this.info;
   }
-  async transfer(value, expectedMd5, { signal, onProgress, onStage, onRetry } = {}) {
+  async transfer(value, expectedMd5, { signal, onProgress, onStage, onRetry, onMode } = {}) {
     if (!this.info || this.transferring) throw new Error('請先完成 OTA 連線，且一次只能執行一筆更新。');
     const image = validateFirmware(value, this.info.capacity); const digest = bytes(expectedMd5);
     if (digest.length !== 16) throw new Error('OTA MD5 長度不正確。');
@@ -160,16 +213,29 @@ export class OtaClient {
       new DataView(begin.buffer).setUint32(2, image.length, true);
       const ready = await this.request(this.control, begin, { signal, onRetry });
       if (ready.phase !== 1 || ready.offset !== 0 || ready.total !== image.length) throw new Error('裝置 OTA 起始狀態不正確。');
-      const maxData = Math.min(240, ready.maxData, this.info.maxData);
+      /* [V1.2 修改] 只採用 BEGIN 時的 MTU 推算；舊 INFO 可能在 MTU 協商完成前回 14。 */
+      const maxData = Math.min(240, ready.maxData);
+      const batchAvailable = (ready.flags & FEATURE_BATCH_ACK) !== 0 && this.batchPackets > 1;
       onStage?.('write'); onProgress?.(0, 0, image.length);
-      for (let offset = 0; offset < image.length;) {
-        throwIfAborted(signal);
-        const length = Math.min(maxData, image.length - offset); const packet = new Uint8Array(6 + length);
-        packet.set([OP.DATA, this.id]); new DataView(packet.buffer).setUint32(2, offset, true);
-        packet.set(image.subarray(offset, offset + length), 6);
-        const ack = await this.request(this.data, packet, { signal, expectedOffset: offset + length, onRetry });
-        if (ack.phase !== 1 || ack.total !== image.length) throw new Error('裝置 OTA 傳輸狀態不正確。');
-        offset = ack.offset; onProgress?.(Math.min(99, offset * 100 / image.length), offset, image.length);
+      if (batchAvailable) {
+        const sync = await this.request(this.control, Uint8Array.of(OP.SYNC, this.id), { signal, onRetry });
+        if (sync.phase !== 1 || sync.offset !== 0 || sync.total !== image.length) {
+          throw new Error('裝置不支援目前的批次傳輸模式。');
+        }
+        onMode?.('batch', maxData, this.batchPackets);
+        await this.sendWindow(image, 0, maxData, { signal, onRetry, onProgress });
+      } else {
+        // [保留] 舊版 V1.2 韌體依然使用逐包 ACK，避免舊機種失去 OTA 能力。
+        onMode?.('legacy', maxData, 1);
+        for (let offset = 0; offset < image.length;) {
+          throwIfAborted(signal);
+          const length = Math.min(maxData, image.length - offset); const packet = new Uint8Array(6 + length);
+          packet.set([OP.DATA, this.id]); new DataView(packet.buffer).setUint32(2, offset, true);
+          packet.set(image.subarray(offset, offset + length), 6);
+          const ack = await this.request(this.data, packet, { signal, expectedOffset: offset + length, onRetry });
+          if (ack.phase !== 1 || ack.total !== image.length) throw new Error('裝置 OTA 傳輸狀態不正確。');
+          offset = ack.offset; onProgress?.(Math.min(99, offset * 100 / image.length), offset, image.length);
+        }
       }
       throwIfAborted(signal);
       // [新增] END 會驗證並切換開機分區，此階段不接受取消。

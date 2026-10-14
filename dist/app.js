@@ -210,7 +210,13 @@ async function flashBle() {
     onProgress(percent, accepted, total) {
       setProgress(percent, percent === 100 ? "校驗完成，裝置即將重新啟動" : "已確認 " + accepted.toLocaleString() + " / " + total.toLocaleString() + " bytes");
     },
-    onRetry(attempt) { appendLog("裝置回覆逾時，重傳第 " + attempt + " 次。"); },
+    // [V1.2 新增] 顯示實際 payload 及傳輸模式，便於定位 MTU 問題。
+    onMode(mode, payload, batch) {
+      appendLog(mode === 'batch'
+        ? `批次 OTA：有效封包 ${payload} bytes，每 ${batch} 包累計確認。`
+        : `相容 OTA：有效封包 ${payload} bytes，逐包確認。`);
+    },
+    onRetry(attempt) { appendLog("裝置回覆逾時或資料遺失，重傳第 " + attempt + " 次。"); },
   });
   setStatus("更新完成", "success");
   appendLog("裝置確認校驗成功。設定與歷史紀錄保留，約 5 秒後重新啟動。");
