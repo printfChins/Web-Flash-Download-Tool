@@ -6,6 +6,8 @@
  * [V1.2 手機修正 新增] 依瀏覽器能力選擇預設模式，提示不影響選檔與切換。
  */
 import { OtaClient, UUIDS, validateFirmware } from "./ota-protocol.js";
+/* [新增] 裝置設定與資料檢視模組；不改寫原 OTA 邏輯。 */
+import { DeviceManager } from "./device-manager.js";
 const IMAGE_SIZE = 4 * 1024 * 1024;
 const FLASH_ADDRESS = 0x000000;
 const BAUD_RATE = 460800;
@@ -18,6 +20,9 @@ const elements = {
   modeHint: document.querySelector("#modeHint"),
   modeUsb: document.querySelector("#modeUsb"),
   modeBle: document.querySelector("#modeBle"),
+  modeManage: document.querySelector("#modeManage"),
+  flashWorkspace: document.querySelector("#flashWorkspace"),
+  deviceWorkspace: document.querySelector("#deviceWorkspace"),
   flashButton: document.querySelector("#flashButton"),
   disconnectButton: document.querySelector("#disconnectButton"),
   buttonText: document.querySelector("#buttonText"),
@@ -34,6 +39,8 @@ let mode = "usb";
 let firmwareFile = null, firmwareBytes = null, transport = null;
 let device = null, client = null, controller = null;
 let busy = false, verifying = false, completed = false, selection = 0;
+/* [新增] 藍牙管理連線與 OTA 傳輸互斥。 */
+const deviceManager = new DeviceManager();
 
 function appendLog(message) {
   const time = new Date().toLocaleTimeString("zh-TW", { hour12: false });
@@ -60,7 +67,8 @@ function supported(kind = mode) {
     ? typeof navigator.serial?.requestPort === "function" : typeof navigator.bluetooth?.requestDevice === "function");
 }
 function updateControls() {
-  elements.input.disabled = busy; elements.modeUsb.disabled = busy; elements.modeBle.disabled = busy;
+  elements.input.disabled = busy; elements.modeUsb.disabled = busy || deviceManager.working; elements.modeBle.disabled = busy || deviceManager.working;
+  elements.modeManage.disabled = busy || deviceManager.working;
   elements.dropZone.setAttribute("aria-disabled", String(busy));
   elements.flashButton.disabled = busy || !firmwareFile || !firmwareBytes || !supported();
   elements.buttonText.textContent = busy ? (verifying ? "正在校驗韌體" : "更新進行中")
@@ -102,11 +110,18 @@ async function selectFile(file) {
   updateControls();
 }
 function changeMode(next) {
-  if (busy) return;
+  if (busy || deviceManager.working) return;
   const file = firmwareFile || elements.input.files[0];
+  /* [新增] 離開裝置管理時釋放 BLE GATT；可用同一裝置進行 OTA，不同時佔用連線。 */
+  if (mode === "manage" && next !== "manage") deviceManager.deactivate();
   mode = next; resetStages(); setProgress(0, "等待操作");
+  elements.flashWorkspace.hidden = mode === "manage";
+  elements.deviceWorkspace.hidden = mode !== "manage";
+  if (mode === "manage") deviceManager.activate();
   elements.modeUsb.setAttribute("aria-pressed", String(mode === "usb"));
   elements.modeBle.setAttribute("aria-pressed", String(mode === "ble"));
+  elements.modeManage.setAttribute("aria-pressed", String(mode === "manage"));
+  if (mode === "manage") { updateControls(); return; }
   elements.fileHeading.textContent = mode === "ble" ? "選擇 OTA 韌體" : "選擇完整映像";
   elements.modeHint.textContent = mode === "ble"
     ? "裝置需先安裝 V1.2。選擇純 app BIN，更新會保留設定與歷史紀錄。"
@@ -242,6 +257,7 @@ async function flashFirmware() {
 elements.input.addEventListener("change", event => { if (!busy) void selectFile(event.target.files[0]); });
 elements.modeUsb.addEventListener("click", () => changeMode("usb"));
 elements.modeBle.addEventListener("click", () => changeMode("ble"));
+elements.modeManage.addEventListener("click", () => changeMode("manage"));
 elements.flashButton.addEventListener("click", flashFirmware);
 elements.disconnectButton.addEventListener("click", async () => {
   if (!busy || verifying) return;

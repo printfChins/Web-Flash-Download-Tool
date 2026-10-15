@@ -171,3 +171,57 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 16px
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+/* [新增] 裝置設定與資料檢視，沿用原工具的深色科技視覺風格。 */
+.main-navigation { margin-bottom: 20px; }
+.device-workspace { border: 1px solid var(--line); background: rgba(7,19,31,.88); padding: clamp(18px, 3vw, 30px); }
+.device-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.device-header h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); }
+.device-desc { margin: 9px 0 15px; color: var(--muted); font-size: .82rem; line-height: 1.65; overflow-wrap: anywhere; }
+.device-connection { display: flex; justify-content: space-between; align-items: center; gap: 18px; border: 1px solid var(--line); padding: 15px; margin: 18px 0; background: var(--panel-2); }
+.device-connection small, .device-connection strong { display: block; overflow-wrap: anywhere; }
+.device-connection small { color: var(--muted); font-size: .75rem; margin-bottom: 4px; }
+.device-connection strong { font-size: .92rem; }
+.device-button-row { display: flex; align-items: center; gap: 10px; margin-top: 11px; }
+.device-button-row button { flex: 1; min-width: 0; min-height: 44px; padding: 9px 10px; cursor: pointer; }
+.primary-action { border: 1px solid var(--cyan); color: #051621; background: var(--cyan); font-weight: 750; }
+.minor-action { border: 1px solid var(--line); color: var(--text); background: var(--panel-2); }
+.text-action { border: 0; color: var(--muted); background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.device-button-row button:disabled, .device-form :disabled { opacity: .45; cursor: not-allowed; }
+.device-button-row button:focus-visible, .device-form :focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+.device-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; }
+.device-card { min-width: 0; padding: clamp(18px, 2.8vw, 24px); border: 1px solid var(--line); background: linear-gradient(145deg,rgba(15,36,52,.76),rgba(7,19,31,.45)); }
+.device-card h3 { margin: 0; font-size: 1.35rem; }
+.device-card h4 { margin: 22px 0 10px; font-size: .94rem; }
+.device-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px; margin: 18px 0 16px; }
+.device-form label { display: grid; gap: 8px; min-width: 0; font-size: .81rem; color: var(--muted); }
+.device-form select, .device-form input { width: 100%; min-width: 0; height: 45px; padding: 0 10px; border: 1px solid #35566c; border-radius: 0; background: #07131f; color: var(--text); font-size: .91rem; }
+.device-divider { height: 1px; background: var(--line); margin: 25px 0 22px; }
+.data-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.data-stats div { border: 1px solid var(--line); min-height: 68px; padding: 11px; background: rgba(7,19,31,.7); }
+.data-stats div small { display: block; font-size: .72rem; margin-bottom: 7px; color: var(--muted); }
+.data-stats div strong { display: block; font-size: clamp(.90rem, 1.65vw, 1.2rem); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.data-stats .data-highlight { grid-column: 1 / -1; }
+.data-stats .data-highlight strong { color: var(--cyan); font-size: 1.5rem; }
+#curveChart { display: block; width: 100%; height: auto; aspect-ratio: 320 / 126; border: 1px solid var(--line); background: #061320; }
+.history-scroll { max-height: 200px; overflow: auto; border: 1px solid var(--line); }
+.history-table { border-collapse: collapse; width: 100%; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.history-table th, .history-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+.history-table th { position: sticky; top: 0; background: #102638; color: var(--muted); }
+.history-table td:nth-child(2) { font-weight: 650; }
+/* [刪減] 裝置管理頁的 DEVICE LOG 已移除，保留 USB/OTA 的 FLASH LOG 樣式。 */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse) {
+  .device-columns { grid-template-columns: minmax(0,1fr); }
+  .device-connection { flex-wrap: wrap; }
+}
+@media (max-width: 540px) {
+  .main-navigation { gap: 6px; }
+  .main-navigation button { min-height: 46px; padding: 10px 4px; font-size: .86rem; }
+  .device-workspace { padding: 15px 13px; }
+  .device-header { flex-wrap: wrap; }
+  .device-connection { display: block; }
+  .device-connection .device-button-row { margin-top: 15px; }
+  .device-card { padding: 15px 13px; }
+  .device-form { grid-template-columns: 1fr; }
+  .device-button-row button { font-size: .86rem; }
+}

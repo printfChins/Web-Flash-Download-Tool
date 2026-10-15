@@ -5,29 +5,31 @@
   <!-- [V1.2 手機修正 修改] 支援手機安全區域與正常縮放。 -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07131f">
-  <meta name="description" content="BRD ESP32-C3 USB 燒錄與 BLE OTA 韌體更新工具">
+  <meta name="description" content="BRD ESP32-C3 USB 燒錄、BLE OTA、藍牙設定與發射資料檢視工具">
   <title>BRD Flash Download Tool</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307131f'/%3E%3Cpath d='M20 17h24v30H20z' fill='none' stroke='%2338d9ff' stroke-width='5'/%3E%3Cpath d='M13 24h7m-7 8h7m-7 8h7m24-16h7m-7 8h7m-7 8h7' stroke='%23f4b942' stroke-width='4'/%3E%3C/svg%3E">
   <!-- [V1.2 手機直式 修改] 更新樣式版本參數，載入手機上下排列的最新樣式。 -->
-  <link rel="stylesheet" href="./styles.css?v=1.2-mobile2">
+  <link rel="stylesheet" href="./styles.css?v=1.2-devicemanager2">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div>
-        <p class="eyebrow">USB / BLE OTA</p>
+        <p class="eyebrow">USB / BLE OTA / DEVICE MANAGER</p>
         <h1>BRD<br><span>Flash Download Tool</span></h1>
       </div>
       <!-- [V1.0.2 刪減] 移除右上角 TARGET 資訊區塊。 -->
     </header>
 
-    <section class="workspace" aria-label="燒錄工具">
+    <!-- [新增] 導覽獨立於燒錄面板；三種功能共用同一站點但各自隔離 BLE 操作。 -->
+    <nav class="mode-switch main-navigation" role="group" aria-label="工作模式">
+      <button id="modeUsb" type="button" aria-pressed="true">USB 燒錄</button>
+      <button id="modeBle" type="button" aria-pressed="false">藍牙 OTA</button>
+      <button id="modeManage" type="button" aria-pressed="false">裝置管理</button>
+    </nav>
+
+    <section id="flashWorkspace" class="workspace" aria-label="燒錄工具">
       <div class="control-panel">
-        <!-- [V1.2 新增] 選擇更新方式；檔案上傳入口共用。 -->
-        <div class="mode-switch" role="group" aria-label="更新方式">
-          <button id="modeUsb" type="button" aria-pressed="true">USB 燒錄</button>
-          <button id="modeBle" type="button" aria-pressed="false">藍牙 OTA</button>
-        </div>
         <p class="mode-hint" id="modeHint"></p>
         <!-- [V1.2 手機修正 修改] 提示放在操作區內，不使用覆蓋畫面的浮動區塊。 -->
         <div class="browser-warning" id="browserWarning" role="status" hidden></div>
@@ -83,6 +85,58 @@
       </aside>
     </section>
 
+
+    <!-- [新增] BRD 裝置管理：與原燒錄狀態獨立，避免誤把參數設定當 OTA 更新。 -->
+    <section id="deviceWorkspace" class="device-workspace" aria-label="藍牙裝置設定與資料檢視" hidden>
+      <div class="device-header">
+        <div><p class="eyebrow">BLE DEVICE MANAGEMENT</p><h2>裝置設定與資料檢視</h2><p class="device-desc">連線後讀寫 BRD 設定、切換 IR TEST 頁面，並接收 BBP 發射紀錄。</p></div>
+        <span class="status-pill" id="deviceStatus" data-state="idle">未連線</span>
+      </div>
+      <div class="device-connection">
+        <div><small>目前裝置</small><strong id="deviceName">未連線</strong></div>
+        <div class="device-button-row"><button type="button" id="deviceConnect" class="primary-action">連接 BLE</button><button type="button" id="deviceDisconnect" class="minor-action">中斷連線</button></div>
+      </div>
+      <div class="browser-warning" id="deviceWarning" role="status" hidden></div>
+      <div class="device-columns">
+        <div class="device-card">
+          <p class="eyebrow">01 / CONFIGURATION</p>
+          <h3>藍牙設定</h3>
+          <p class="device-desc">先讀取目前值。修改後按「儲存至裝置」，韌體在安全時段寫入 NVS；量測中會回 BUSY。</p>
+          <div class="device-form">
+            <label>量測模式<select id="settingMode"><option value="0">LOAD</option><option value="1">AUTO</option></select></label>
+            <label>AUTO RPM 門檻<input id="settingAutoMin" type="number" min="1" max="59999" step="1" value="2000" inputmode="numeric"></label>
+            <label>結束百分比（%）<input id="settingFinish" type="number" min="1" max="100" step="1" value="30" inputmode="numeric"></label>
+            <label>充電時關閉 BLE<select id="settingCharge"><option value="0">停用（充電保留 BLE）</option><option value="1">啟用（充電關閉 BLE）</option></select></label>
+          </div>
+          <div class="device-button-row"><button id="settingRead" type="button" class="minor-action">讀取設定</button><button id="settingSave" type="button" class="primary-action">儲存至裝置</button></div>
+          <div class="device-button-row"><button id="settingDefaults" type="button" class="text-action">表單恢復預設</button><button id="settingDiscard" type="button" class="text-action">取消表單修改</button></div>
+          <div class="device-divider"></div>
+          <h3>OLED 頁面</h3>
+          <p class="device-desc">RAM 即時切換；斷線自動恢復 MAIN，不影響設定儲存。</p>
+          <div class="device-form"><label>顯示頁面<select id="displayPage"><option value="0">MAIN / 轉速</option><option value="1">IR TEST / 感測測試</option></select></label></div>
+          <div class="device-button-row"><button id="displayPageRead" type="button" class="minor-action">讀取頁面</button><button id="displayPageApply" type="button" class="primary-action">切換 OLED 頁面</button></div>
+        </div>
+        <div class="device-card">
+          <p class="eyebrow">02 / DATA VIEWER</p>
+          <h3>資料檢視</h3>
+          <p class="device-desc">透過 BBP Notify 接收 A0 狀態及最新歷史快照，SP 為發射代表值；曲線為最新一次量測有效週期取樣。</p>
+          <div class="data-stats">
+            <div><small>LOAD 狀態</small><strong id="dataLoad">—</strong></div>
+            <div><small>電池電量</small><strong id="dataBattery">—</strong></div>
+            <div><small>累積次數*</small><strong id="dataTotal">—</strong></div>
+            <div><small>歷史最高</small><strong id="dataLifetime">—</strong></div>
+            <div class="data-highlight"><small>最新 SP</small><strong id="dataLatest">—</strong></div>
+          </div>
+          <div class="device-button-row"><button id="bbpRefresh" type="button" class="primary-action">重新讀取紀錄</button><button id="bbpExport" type="button" class="minor-action">匯出 CSV</button></div>
+          <h4>最新曲線</h4>
+          <svg id="curveChart" viewBox="0 0 320 126" role="img" aria-label="最新 32 筆有效週期轉速曲線" preserveAspectRatio="xMidYMid meet"><text x="160" y="62" text-anchor="middle" fill="#8ba3b4" font-size="13">尚無有效曲線資料</text></svg>
+          <h4>近期發射紀錄（最多 50 筆）</h4>
+          <div class="history-scroll"><table class="history-table"><thead><tr><th>序號（近期優先）</th><th>SP</th></tr></thead><tbody id="dataHistory"><tr><td colspan="2">尚無發射紀錄</td></tr></tbody></table></div>
+          <p class="device-desc">* 累積次數在目前 A0 / BBP dump 僅傳輸低 16 位；超過 65535 次會回繞。韌體沒有 BLE 即時 RPM、IR 即時電位或電池實際電壓 Notify，頁面不虛構這些數值。</p>
+        </div>
+      </div>
+      <!-- [刪減] DEVICE LOG 操作紀錄區塊；裝置操作訊息改由狀態及錯誤提示顯示。 -->
+    </section>
     <footer>
       <p></p>
       <p></p>
@@ -91,6 +145,6 @@
 
   <!-- [V1.2 手機修正 修改] 校驗套件隨網站部署，避免外部 CDN 等待使操作介面無反應。 -->
   <script defer src="./vendor/crypto-js.min.js?v=4.2.0"></script>
-  <script type="module" src="./app.js?v=1.2-mobile1"></script>
+  <script type="module" src="./app.js?v=1.2-devicemanager2"></script>
 </body>
 </html>

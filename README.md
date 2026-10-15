@@ -1,6 +1,8 @@
 # BRD Web Flash Download Tool
 
-BRD 裝置韌體線上燒錄工具，可透過瀏覽器選擇韌體檔案並寫入裝置。
+BRD 裝置韌體線上燒錄與 BLE 裝置管理工具。保留 USB 完整燒錄、BLE OTA，新增設定 API 與發射資料檢視功能。
+
+**[裝置管理完整說明與協議](DEVICE_MANAGEMENT.md)**：BLE 設定、OLED IR TEST 頁面、SP 歷史、曲線、CSV 與手機支援情況。
 
 ## 線上燒錄工具
 
